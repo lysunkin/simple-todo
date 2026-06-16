@@ -1,0 +1,10 @@
+# Development override: exposes the backend directly for debugging/Swagger access.
+# Used automatically by `docker compose up` when present alongside docker-compose.yml.
+# Run `docker compose -f docker-compose.yml up` to use only the base config.
+
+services:
+  backend:
+    ports:
+      - "5001:8080"
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development

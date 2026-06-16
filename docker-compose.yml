@@ -1,0 +1,71 @@
+# --- Services ---
+#
+#  db        -> PostgreSQL 16
+#  backend   -> .NET 8 API  (port 5000 on host)
+#  frontend  -> nginx serving the React build (port 3000 on host)
+#
+# Traffic flow:
+#   Browser -> localhost:3000 (nginx)
+#              ├── /api/* -> proxy -> backend:8080 (inside Docker network)
+#              └── /*     -> static React files
+#
+# The backend never exposes port 8080 externally; only nginx reaches it.
+
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tododb
+      POSTGRES_USER: todo
+      POSTGRES_PASSWORD: todopassword
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U todo -d tododb"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - todo-net
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Production
+      ASPNETCORE_URLS: http://+:8080
+      DbProvider: postgres
+      ConnectionStrings__Postgres: "Host=db;Port=5432;Database=tododb;Username=todo;Password=todopassword"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - todo-net
+    # Backend is NOT published to the host; only nginx reaches it.
+    # Remove the comment below to expose it for debugging:
+    # ports:
+    #   - "5000:8080"
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    networks:
+      - todo-net
+
+# --- Volumes ---
+volumes:
+  postgres_data:
+
+# --- Networks ---
+networks:
+  todo-net:
+    driver: bridge
