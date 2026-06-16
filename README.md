@@ -3,6 +3,8 @@
 A full-stack to-do task manager built with **.NET 8 Web API**, **React + TypeScript**, **SQLite** (dev/tests), and **PostgreSQL** (production/Docker).
 
 ---
+![Local Image](./media/screenshot.png)
+---
 
 ## Project Structure
 
