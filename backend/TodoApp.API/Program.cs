@@ -1,19 +1,21 @@
 using Microsoft.EntityFrameworkCore;
 using TodoApp.API.Data;
+using TodoApp.API.DTOs;
 using TodoApp.API.Middleware;
 using TodoApp.API.Repositories;
 using TodoApp.API.Services;
 
-// Npgsql by default rejects DateTime values with Kind=Unspecified when writing
-// to a 'timestamp with time zone' column. This switch tells Npgsql to treat
-// Unspecified as UTC, which matches the intent of DateTime.UtcNow throughout
-// the codebase. Must be set before any Npgsql type is first used.
-AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
-
 var builder = WebApplication.CreateBuilder(args);
 
 // --- Services ---
-builder.Services.AddControllers();
+builder.Services.AddControllers()
+    .AddJsonOptions(opts =>
+    {
+        // Required to correctly deserialise Optional<T> fields in PATCH request bodies.
+        // Without this, absent fields and null fields are both read as the struct default
+        // (IsPresent = false), making it impossible for clients to explicitly clear a field.
+        opts.JsonSerializerOptions.Converters.Add(new OptionalJsonConverterFactory());
+    });
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(c =>
 {

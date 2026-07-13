@@ -26,7 +26,7 @@ public class TodoService : ITodoService
     {
         var (items, total) = await _repo.GetAllAsync(query, ct);
         return new PagedResponse<TodoItemResponse>(
-            Items: items.Select(ToResponse),
+            Items: items.Select(ToResponse).ToList().AsReadOnly(),
             TotalCount: total,
             Page: query.Page,
             PageSize: query.PageSize
@@ -71,8 +71,9 @@ public class TodoService : ITodoService
         if (request.Title is not null)
             item.Title = request.Title.Trim();
 
-        if (request.Description is not null)
-            item.Description = request.Description.Trim();
+        // Optional<T> distinguishes "absent" (do nothing) from "null" (clear the field)
+        if (request.Description.IsPresent)
+            item.Description = request.Description.Value?.Trim();
 
         if (request.IsCompleted.HasValue)
             item.IsCompleted = request.IsCompleted.Value;
@@ -80,8 +81,10 @@ public class TodoService : ITodoService
         if (request.Priority is not null)
             item.Priority = ParsePriority(request.Priority);
 
-        if (request.DueDate.HasValue)
-            item.DueDate = ToUtc(request.DueDate.Value);
+        if (request.DueDate.IsPresent)
+            item.DueDate = request.DueDate.Value.HasValue
+                ? ToUtc(request.DueDate.Value.Value)
+                : null;
 
         item.UpdatedAt = DateTime.UtcNow;
 
@@ -111,12 +114,17 @@ public class TodoService : ITodoService
     );
 
     /// <summary>
-    /// Parses priority string; defaults to Medium for unknown values.
-    /// Assumption: invalid priority strings are treated as Medium rather than a 400 error,
-    /// since the UI controls the options. Adjust if strict validation is preferred.
+    /// Parses a priority string. Throws <see cref="ArgumentException"/> for unknown values
+    /// so the caller can return a 400 Bad Request rather than silently coercing to Medium.
     /// </summary>
-    private static Priority ParsePriority(string? value) =>
-        Enum.TryParse<Priority>(value, ignoreCase: true, out var p) ? p : Priority.Medium;
+    private static Priority ParsePriority(string? value)
+    {
+        if (Enum.TryParse<Priority>(value, ignoreCase: true, out var p))
+            return p;
+
+        var valid = string.Join(", ", Enum.GetNames<Priority>());
+        throw new ArgumentException($"Invalid priority '{value}'. Valid values: {valid}.");
+    }
 
     /// <summary>
     /// Ensures a DateTime has Kind=Utc before it reaches the PostgreSQL driver.

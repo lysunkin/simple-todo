@@ -38,10 +38,15 @@ public class TodoDbContext : DbContext
             entity.Property(e => e.Priority)
                   .HasConversion<int>();
 
+            entity.Property(e => e.DueDate)
+                  .HasColumnType("timestamp with time zone");
+
             entity.Property(e => e.CreatedAt)
+                  .HasColumnType("timestamp with time zone")
                   .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
             entity.Property(e => e.UpdatedAt)
+                  .HasColumnType("timestamp with time zone")
                   .HasDefaultValueSql("CURRENT_TIMESTAMP");
 
             // Index for the most common filter: incomplete tasks by priority

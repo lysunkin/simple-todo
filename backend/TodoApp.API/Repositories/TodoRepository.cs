@@ -112,7 +112,4 @@ public class TodoRepository : ITodoRepository
         await _db.SaveChangesAsync(ct);
         return true;
     }
-
-    public async Task<bool> ExistsAsync(int id, CancellationToken ct = default)
-        => await _db.TodoItems.AnyAsync(t => t.Id == id, ct);
 }

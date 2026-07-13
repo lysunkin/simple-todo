@@ -40,24 +40,48 @@ public class ErrorHandlingMiddleware
         // Keeps it copy-pasteable without being a full UUID in the UI.
         var errorId = $"ERR-{Guid.NewGuid():N}"[..12].ToUpperInvariant();
 
-        // Log the full exception server-side, keyed on the error ID.
-        _logger.LogError(
-            ex,
-            "Unhandled exception [{ErrorId}] {Method} {Path}: {Message}",
-            errorId,
-            context.Request.Method,
-            context.Request.Path,
-            ex.Message);
+        int statusCode;
+        string message;
 
-        context.Response.StatusCode = (int)HttpStatusCode.InternalServerError;
+        if (ex is ArgumentException)
+        {
+            // Validation errors thrown by the service layer (e.g. invalid priority value).
+            statusCode = (int)HttpStatusCode.BadRequest;
+            message = ex.Message;
+            _logger.LogWarning(
+                "Bad request [{ErrorId}] {Method} {Path}: {Message}",
+                errorId,
+                context.Request.Method,
+                context.Request.Path,
+                ex.Message);
+        }
+        else
+        {
+            // Unexpected errors: log full exception, return opaque error ID to caller.
+            statusCode = (int)HttpStatusCode.InternalServerError;
+            message = "An unexpected error occurred.";
+            _logger.LogError(
+                ex,
+                "Unhandled exception [{ErrorId}] {Method} {Path}: {Message}",
+                errorId,
+                context.Request.Method,
+                context.Request.Path,
+                ex.Message);
+        }
+
+        context.Response.StatusCode = statusCode;
         context.Response.ContentType = "application/json";
 
         var body = JsonSerializer.Serialize(
-            new ErrorResponse(errorId, "An unexpected error occurred."),
-            new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase });
+            new ErrorResponse(errorId, message),
+            _jsonOptions);
 
         await context.Response.WriteAsync(body);
     }
+
+    // Allocated once to avoid per-request allocations.
+    private static readonly JsonSerializerOptions _jsonOptions =
+        new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase };
 }
 
 /// <summary>Response shape returned to clients on unhandled errors.</summary>

@@ -69,7 +69,7 @@ public class TodoController : ControllerBase
     }
 
     /// <summary>Partially update a to-do item. Only supplied fields are changed.</summary>
-    [HttpPut("{id:int}")]
+    [HttpPatch("{id:int}")]
     [ProducesResponseType(typeof(TodoItemResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]

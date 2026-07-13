@@ -14,5 +14,4 @@ public interface ITodoRepository
     Task<TodoItem> CreateAsync(TodoItem item, CancellationToken ct = default);
     Task<TodoItem> UpdateAsync(TodoItem item, CancellationToken ct = default);
     Task<bool> DeleteAsync(int id, CancellationToken ct = default);
-    Task<bool> ExistsAsync(int id, CancellationToken ct = default);
 }

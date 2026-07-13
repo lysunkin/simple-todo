@@ -104,18 +104,13 @@ public class TodoServiceTests
     }
 
     [Fact]
-    public async Task CreateAsync_DefaultsToMediumPriority_ForUnknownValue()
+    public async Task CreateAsync_Throws_ForUnknownPriorityValue()
     {
         var request = new CreateTodoItemRequest("Test", null, "Bogus", null);
-        TodoItem? captured = null;
-        _repoMock
-            .Setup(r => r.CreateAsync(It.IsAny<TodoItem>(), default))
-            .Callback<TodoItem, CancellationToken>((item, _) => captured = item)
-            .ReturnsAsync((TodoItem item, CancellationToken _) => { item.Id = 1; return item; });
 
-        await _sut.CreateAsync(request);
-
-        captured!.Priority.Should().Be(Priority.Medium);
+        await _sut.Invoking(s => s.CreateAsync(request))
+                  .Should().ThrowAsync<ArgumentException>()
+                  .WithMessage("*Bogus*");
     }
 
     // --- Update ---
@@ -124,7 +119,7 @@ public class TodoServiceTests
     {
         _repoMock.Setup(r => r.GetByIdAsync(99, default)).ReturnsAsync((TodoItem?)null);
 
-        var result = await _sut.UpdateAsync(99, new UpdateTodoItemRequest(null, null, null, null, null));
+        var result = await _sut.UpdateAsync(99, new UpdateTodoItemRequest(null, default, null, null, default));
 
         result.Should().BeNull();
     }
@@ -141,7 +136,7 @@ public class TodoServiceTests
         _repoMock.Setup(r => r.UpdateAsync(It.IsAny<TodoItem>(), default))
                  .ReturnsAsync((TodoItem item, CancellationToken _) => item);
 
-        var result = await _sut.UpdateAsync(1, new UpdateTodoItemRequest("New title", null, true, null, null));
+        var result = await _sut.UpdateAsync(1, new UpdateTodoItemRequest("New title", default, true, null, default));
 
         result!.Title.Should().Be("New title");
         result.IsCompleted.Should().BeTrue();
