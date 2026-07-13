@@ -29,10 +29,12 @@ export interface CreateTodoRequest {
 
 export interface UpdateTodoRequest {
   title?: string;
-  description?: string;
+  // null explicitly clears the field; undefined (absent) leaves it unchanged.
+  // Mirrors the backend Optional<T> pattern introduced in the PATCH handler.
+  description?: string | null;
   isCompleted?: boolean;
   priority?: Priority;
-  dueDate?: string;
+  dueDate?: string | null;
 }
 
 export interface TodoFilters {

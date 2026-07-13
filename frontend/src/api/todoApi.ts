@@ -30,9 +30,12 @@ api.interceptors.response.use(
       return Promise.reject(new Error(`Something went wrong. Reference: ${data.errorId}`));
     }
 
-    // Validation errors (400) have a human-readable title — safe to show.
-    if (err.response?.status === 400 && data?.title) {
-      return Promise.reject(new Error(data.title));
+    // Validation errors (400): two possible shapes:
+    //   1. { errorId, message } — thrown by the service layer (e.g. invalid priority)
+    //   2. { title, ... }      — ASP.NET model-binding / DataAnnotations failures
+    if (err.response?.status === 400) {
+      if (data?.message) return Promise.reject(new Error(data.message));
+      if (data?.title)   return Promise.reject(new Error(data.title));
     }
 
     // Network-level failure (no response at all)
@@ -70,7 +73,7 @@ export const todoApi = {
   },
 
   update: async (id: number, request: UpdateTodoRequest): Promise<TodoItem> => {
-    const { data } = await api.put<TodoItem>(`/api/todo/${id}`, request);
+    const { data } = await api.patch<TodoItem>(`/api/todo/${id}`, request);
     return data;
   },
 

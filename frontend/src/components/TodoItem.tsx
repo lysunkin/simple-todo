@@ -36,7 +36,9 @@ export function TodoItem({ item, onToggle, onUpdate, onDelete }: Props) {
     try {
       await onUpdate(item.id, {
         title: editTitle.trim(),
-        description: editDescription.trim() || undefined,
+        // Send null when the field is cleared so the backend actually removes the value.
+        // Sending undefined (absent) would leave the existing value unchanged.
+        description: editDescription.trim() || null,
         priority: editPriority,
       });
       setEditing(false);
